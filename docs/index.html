@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MIxS Metadata Validator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 30px;
+        }
+
+        .upload-area {
+            border: 3px dashed #ddd;
+            border-radius: 15px;
+            padding: 60px 20px;
+            text-align: center;
+            background: #fafafa;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-bottom: 30px;
+        }
+
+        .upload-area:hover, .upload-area.dragover {
+            border-color: #4facfe;
+            background: #f0f8ff;
+            transform: translateY(-2px);
+        }
+
+        .upload-icon {
+            font-size: 4em;
+            color: #ddd;
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover .upload-icon {
+            color: #4facfe;
+        }
+
+        .upload-text {
+            font-size: 1.2em;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .upload-subtext {
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .summary-panel {
+            display: none;
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .summary-title {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .summary-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .summary-card h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .summary-card ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .summary-card li {
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 0.9em;
+        }
+
+        .summary-card li:last-child {
+            border-bottom: none;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #4facfe;
+        }
+
+        .legend {
+            display: none;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .legend h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .legend-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9em;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .valid { background-color: #d4edda !important; }
+        .invalid { background-color: #f8d7da !important; }
+        .uncertain { background-color: #f8f9fa !important; }
+        .missing { background-color: #fff3cd !important; }
+
+        .table-container {
+            display: none;
+            overflow-x: auto;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+            font-size: 0.9em;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .download-section {
+            display: none;
+            text-align: center;
+            padding: 30px;
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4facfe;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>MIxS Metadata Validator</h1>
+            <p>Drag and drop your Excel file to validate against MIxS standards</p>
+        </div>
+
+        <div class="main-content">
+            <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">Drop your Excel file here or click to browse</div>
+                <div class="upload-subtext">Supports .xlsx and .xls files</div>
+            </div>
+            <input type="file" id="fileInput" class="file-input" accept=".xlsx,.xls">
+
+            <div class="error" id="errorDiv"></div>
+            <div class="loading" id="loadingDiv">
+                <div class="spinner"></div>
+                <p>Processing your file...</p>
+            </div>
+
+            <div class="summary-panel" id="summaryPanel">
+                <div class="summary-title">
+                    📊 Validation Summary
+                </div>
+                <div class="summary-grid">
+                    <div class="summary-card">
+                        <h3>File Statistics</h3>
+                        <div id="fileStats"></div>
+                    </div>
+                    <div class="summary-card">
+                        <h3>Field Validation</h3>
+                        <div id="fieldStats"></div>
+                    </div>
+                    <div class="summary-card">
+                        <h3>Missing Required Fields</h3>
+                        <div id="missingFields"></div>
+                    </div>
+                    <div class="summary-card">
+                        <h3>Non-Standard Fields</h3>
+                        <div id="nonStandardFields"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="legend" id="legend">
+                <h3>Color Legend</h3>
+                <div class="legend-items">
+                    <div class="legend-item">
+                        <div class="legend-color valid"></div>
+                        <span>Valid - field passed validation</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color invalid"></div>
+                        <span>Invalid - field failed validation</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color uncertain"></div>
+                        <span>Uncertain - complex validation not performed</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color missing"></div>
+                        <span>Missing - required field is empty</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container" id="tableContainer">
+                <table id="dataTable"></table>
+            </div>
+
+            <div class="download-section" id="downloadSection">
+                <button class="download-btn" onclick="downloadValidatedFile()">
+                    📥 Download Validated File
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Enhanced MIxS validation rules with parsed enumeration values
+        const MIXS_ENUMERATIONS = {
+            "neg_cont_type": ["distilled water", "phosphate buffer", "empty collection device", "empty collection tube", "DNA-free PCR mix", "sterile swab", "sterile syringe"],
+            "biotic_relationship": ["free living", "parasitism", "commensalism", "symbiotic", "mutualism"],
+            "rel_to_oxygen": ["aerobe", "anaerobe", "facultative", "microaerophilic", "microanaerobe", "obligate aerobe", "obligate anaerobe"],
+            "lib_layout": ["paired", "single", "vector", "other"],
+            "assembly_qual": ["Finished genome", "High-quality draft genome", "Medium-quality draft genome", "Low-quality draft genome", "Genome fragment(s)"],
+            "sort_tech": ["flow cytometric cell sorting", "microfluidics", "lazer-tweezing", "optical manipulation", "micromanipulation", "other"],
+            "single_cell_lysis_appr": ["chemical", "enzymatic", "physical", "combination"],
+            "wga_amp_appr": ["pcr based", "mda based"],
+            "pred_genome_type": ["DNA", "dsDNA", "ssDNA", "RNA", "dsRNA", "ssRNA", "ssRNA (+)", "ssRNA (-)", "mixed", "uncharacterized"],
+            "pred_genome_struc": ["segmented", "non-segmented", "undetermined"],
+            "detec_type": ["independent sequence (UViG)", "provirus (UpViG)"]
+        };
+
+        const BUILT_ENV_ENUMERATIONS = {
+            "surf_material": ["adobe", "carpet", "cinder blocks", "concrete", "hay bales", "glass", "metal", "paint", "plastic", "stainless steel", "stone", "stucco", "tile", "vinyl", "wood"],
+            "surf_air_cont": ["dust", "organic matter", "particulate matter", "volatile organic compounds", "biological contaminants", "radon", "nutrients", "biocides"],
+            "indoor_space": ["bedroom", "office", "bathroom", "foyer", "kitchen", "locker room", "hallway", "elevator"],
+            "indoor_surf": ["cabinet", "ceiling", "counter top", "door", "shelving", "vent cover", "window", "wall"],
+            "filter_type": ["particulate air filter", "chemical air filter", "low-MERV pleated media", "HEPA", "electrostatic", "gas-phase or ultraviolet air treatments"],
+            "heat_cool_type": ["radiant system", "heat pump", "forced air system", "steam forced heat", "wood stove"],
+            "substructure_type": ["crawlspace", "slab on grade", "basement"],
+            "building_setting": ["urban", "suburban", "exurban", "rural"],
+            "light_type": ["natural light", "electric light", "desk lamp", "flourescent lights", "natural light", "none"],
+            "room_type": ["attic", "bathroom", "closet", "conference room", "elevator", "examining room", "hallway", "kitchen", "mail room", "private office", "open office", "stairwell", "restroom", "lobby", "vestibule", "mechanical or electrical room", "data center", "laboratory_wet", "laboratory_dry", "gymnasium", "natatorium", "auditorium", "lockers", "cafe", "warehouse"],
+            "samp_weather": ["clear sky", "cloudy", "foggy", "hail", "rain", "snow", "sleet", "sunny", "windy"],
+            "weekday": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        };
+
+        // Combined enumeration lookup
+        const ALL_ENUMERATIONS = { ...MIXS_ENUMERATIONS, ...BUILT_ENV_ENUMERATIONS };
+
+        // Human-readable field names and examples from MIxS reference
+        const FIELD_INFO = {
+            // MIxS core fields
+            "samp_name": { humanName: "sample name", example: "ISDsoil1" },
+            "samp_taxon_id": { humanName: "taxonomy ID of DNA sample", example: "Gut Metagenome [NCBI:txid749906]" },
+            "project_name": { humanName: "project name", example: "Forest soil metagenome" },
+            "lat_lon": { humanName: "geographic location (latitude and longitude)", example: "50.586825 6.408977" },
+            "geo_loc_name": { humanName: "geographic location (country and/or sea,region)", example: "USA: Maryland: Bethesda" },
+            "collection_date": { humanName: "collection date", example: "2018-05-11T10:00:00+01:00" },
+            "env_broad_scale": { humanName: "broad-scale environmental context", example: "oceanic epipelagic zone biome [ENVO:01000033]" },
+            "env_local_scale": { humanName: "local environmental context", example: "marine photic zone [ENVO:00000209]" },
+            "env_medium": { humanName: "environmental medium", example: "sea water [ENVO:00002149]" },
+            "nucl_acid_ext": { humanName: "nucleic acid extraction", example: "https://mobio.com/media/wysiwyg/pdfs/protocols/12888.pdf" },
+            "nucl_acid_amp": { humanName: "nucleic acid amplification", example: "https://www.frontiersin.org/articles/10.3389/fmicb.2012.00110/full" },
+            "lib_size": { humanName: "library size", example: "7500" },
+            "lib_reads_seqd": { humanName: "library reads sequenced", example: "20000" },
+            "lib_vector": { humanName: "library vector", example: "Cloning vector pUC19" },
+            
+            // Built Environment fields  
+            "surf_material": { humanName: "surface material", example: "wood" },
+            "surf_air_cont": { humanName: "surface-air contaminant", example: "dust" },
+            "indoor_space": { humanName: "indoor space", example: "bedroom" },
+            "indoor_surf": { humanName: "indoor surface", example: "wall" },
+            "filter_type": { humanName: "filter type", example: "HEPA" },
+            "heat_cool_type": { humanName: "heating and cooling type", example: "heat pump" },
+            "substructure_type": { humanName: "substructure type", example: "basement" },
+            "building_setting": { humanName: "building setting", example: "urban" },
+            "light_type": { humanName: "light type", example: "natural light" },
+            "rel_air_humidity": { humanName: "relative air humidity", example: "45 %" },
+            "abs_air_humidity": { humanName: "absolute air humidity", example: "9 g/m3" },
+            "surf_humidity": { humanName: "surface humidity", example: "25 %" },
+            "air_temp": { humanName: "air temperature", example: "20 degree Celsius" },
+            "surf_temp": { humanName: "surface temperature", example: "15 degree Celsius" },
+            "surf_moisture": { humanName: "surface moisture", example: "0.01 g/kg" },
+            "dew_point": { humanName: "dew point", example: "5 degree Celsius" },
+            "build_occup_type": { humanName: "building occupancy type", example: "office" },
+            "space_typ_state": { humanName: "space typical state", example: "typically occupied" },
+            "room_type": { humanName: "room type", example: "office" },
+            "samp_weather": { humanName: "sampling day weather", example: "sunny" },
+            "weekday": { humanName: "weekday", example: "Tuesday" },
+            "window_cond": { humanName: "window condition", example: "new" },
+            "window_cover": { humanName: "window covering", example: "blinds" },
+            "window_loc": { humanName: "window location", example: "north" },
+            "window_mat": { humanName: "window material", example: "wood" },
+            "window_type": { humanName: "window type", example: "single-hung sash window" }
+        };
+
+        // MIxS validation rules (embedded from the parsed data)
+        const MIXS_FIELDS = {
+            "samp_name": { expectedValue: "text", valueSyntax: "{text}", mandatory: true },
+            "samp_taxon_id": { expectedValue: "Taxonomy ID", valueSyntax: "{text} [NCBI:txid]", mandatory: true },
+            "project_name": { expectedValue: "", valueSyntax: "{text}", mandatory: true },
+            "lat_lon": { expectedValue: "decimal degrees, limit to 8 decimal points", valueSyntax: "{float} {float}", mandatory: true },
+            "geo_loc_name": { expectedValue: "country or ocean or sea, region, specific location", valueSyntax: "{text}: {text}: {text}", mandatory: true },
+            "collection_date": { expectedValue: "date and time", valueSyntax: "{timestamp}", mandatory: true },
+            "env_broad_scale": { expectedValue: "EnvO term", valueSyntax: "{termLabel} {[termID]}", mandatory: true },
+            "env_local_scale": { expectedValue: "EnvO term", valueSyntax: "{termLabel} {[termID]}", mandatory: true },
+            "env_medium": { expectedValue: "EnvO term", valueSyntax: "{termLabel} {[termID]}", mandatory: true },
+            "nucl_acid_ext": { expectedValue: "PMID, DOI, URL or free text", valueSyntax: "{PMID}|{DOI}|{URL}|{text}", mandatory: true },
+            "nucl_acid_amp": { expectedValue: "PMID, DOI, URL or free text", valueSyntax: "{PMID}|{DOI}|{URL}|{text}", mandatory: true },
+            "lib_size": { expectedValue: "number", valueSyntax: "{integer}", mandatory: true },
+            "lib_reads_seqd": { expectedValue: "number", valueSyntax: "{integer}", mandatory: true },
+            "lib_vector": { expectedValue: "text", valueSyntax: "{text}", mandatory: true }
+        };
+
+        const BUILT_ENV_FIELDS = {
+            "samp_name": { expectedValue: "text", valueSyntax: "{text}", mandatory: true },
+            "project_name": { expectedValue: "", valueSyntax: "{text}", mandatory: true },
+            "surf_material": { expectedValue: "enumeration", valueSyntax: "{text}", mandatory: true },
+            "surf_air_cont": { expectedValue: "enumeration", valueSyntax: "{text}", mandatory: true },
+            "rel_air_humidity": { expectedValue: "measurement value", valueSyntax: "{float} {unit}", mandatory: true },
+            "abs_air_humidity": { expectedValue: "measurement value", valueSyntax: "{float} {unit}", mandatory: true },
+            "surf_humidity": { expectedValue: "measurement value", valueSyntax: "{float} {unit}", mandatory: true },
+            "air_temp": { expectedValue: "measurement value", valueSyntax: "{float} {unit}", mandatory: true },
+            "surf_temp": { expectedValue: "measurement value", valueSyntax: "{float} {unit}", mandatory: true },
+            "surf_moisture": { expectedValue: "measurement value", valueSyntax: "{float} {unit}", mandatory: true },
+            "dew_point": { expectedValue: "measurement value", valueSyntax: "{float} {unit}", mandatory: true },
+            "indoor_space": { expectedValue: "enumeration", valueSyntax: "{text}", mandatory: true },
+            "indoor_surf": { expectedValue: "enumeration", valueSyntax: "{text}", mandatory: true },
+            "filter_type": { expectedValue: "enumeration", valueSyntax: "{text}", mandatory: true },
+            "heat_cool_type": { expectedValue: "enumeration", valueSyntax: "{text}", mandatory: true },
+            "substructure_type": { expectedValue: "enumeration", valueSyntax: "{text}", mandatory: true },
+            "building_setting": { expectedValue: "enumeration", valueSyntax: "{text}", mandatory: true },
+            "light_type": { expectedValue: "enumeration", valueSyntax: "{text}", mandatory: true }
+        };
+
+        // Combined field definitions
+        const ALL_FIELDS = { ...MIXS_FIELDS, ...BUILT_ENV_FIELDS };
+        const REQUIRED_FIELDS = Object.keys(ALL_FIELDS).filter(key => ALL_FIELDS[key].mandatory);
+
+        let originalFileName = '';
+        let currentWorkbook = null;
+        let currentData = null;
+        let validationResults = null;
+
+        // File upload handling
+        document.getElementById('fileInput').addEventListener('change', handleFile);
+        
+        const uploadArea = document.querySelector('.upload-area');
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                processFile(files[0]);
+            }
+        });
+
+        function handleFile(e) {
+            const file = e.target.files[0];
+            if (file) {
+                processFile(file);
+            }
+        }
+
+        function processFile(file) {
+            if (!file.name.match(/\.(xlsx|xls)$/i)) {
+                showError('Please select a valid Excel file (.xlsx or .xls)');
+                return;
+            }
+
+            // Store original filename without extension for download naming
+            originalFileName = file.name.replace(/\.(xlsx|xls)$/i, '');
+
+            showLoading(true);
+            hideError();
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const arrayBuffer = e.target.result;
+                    
+                    // Use ExcelJS to read the file
+                    const workbook = new ExcelJS.Workbook();
+                    await workbook.xlsx.load(arrayBuffer);
+                    
+                    currentWorkbook = workbook;
+                    
+                    // Get the first sheet
+                    const firstSheet = workbook.worksheets[0];
+                    if (!firstSheet) {
+                        throw new Error('No worksheets found in the file');
+                    }
+                    
+                    // Convert to array format for processing
+                    const jsonData = [];
+                    firstSheet.eachRow((row, rowNumber) => {
+                        const rowData = [];
+                        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                            rowData[colNumber - 1] = cell.value;
+                        });
+                        jsonData.push(rowData);
+                    });
+                    
+                    // Find header row (first row with 'samp_name')
+                    let headerRowIndex = -1;
+                    for (let i = 0; i < jsonData.length; i++) {
+                        if (jsonData[i] && jsonData[i][0] === 'samp_name') {
+                            headerRowIndex = i;
+                            break;
+                        }
+                    }
+                    
+                    if (headerRowIndex === -1) {
+                        throw new Error('Could not find header row starting with "samp_name"');
+                    }
+                    
+                    // Extract headers and data
+                    const headers = jsonData[headerRowIndex];
+                    const dataRows = jsonData.slice(headerRowIndex + 1).filter(row => 
+                        row && row.some(cell => cell !== null && cell !== undefined && cell !== '')
+                    );
+                    
+                    currentData = {
+                        headers: headers,
+                        rows: dataRows,
+                        headerRowIndex: headerRowIndex
+                    };
+                    
+                    // Validate data
+                    validationResults = validateData(currentData);
+                    
+                    // Display results
+                    displayResults(currentData, validationResults);
+                    showLoading(false);
+                    
+                } catch (error) {
+                    showError('Error processing file: ' + error.message);
+                    showLoading(false);
+                }
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
+
+        function validateData(data) {
+            const results = {
+                fieldValidation: {},
+                missingRequired: [],
+                nonStandardFields: [],
+                emptyFields: [],
+                invalidValueCounts: {},
+                sampleValidation: []
+            };
+
+            // Check for missing required fields
+            const presentFields = data.headers.filter(h => h);
+            results.missingRequired = REQUIRED_FIELDS.filter(field => !presentFields.includes(field));
+
+            // Identify non-standard fields
+            results.nonStandardFields = presentFields.filter(field => !ALL_FIELDS[field] && field);
+
+            // Identify empty fields
+            results.emptyFields = presentFields.filter(field => {
+                const colIndex = data.headers.indexOf(field);
+                return data.rows.every(row => !row[colIndex] || row[colIndex] === '');
+            });
+
+            // Validate each field
+            data.headers.forEach((header, colIndex) => {
+                if (!header || !ALL_FIELDS[header]) return;
+
+                const fieldDef = ALL_FIELDS[header];
+                const values = data.rows.map(row => row[colIndex]);
+                const validation = validateField(header, values, fieldDef);
+                
+                results.fieldValidation[header] = validation;
+                results.invalidValueCounts[header] = validation.invalid.length;
+            });
+
+            // Validate each sample (row)
+            data.rows.forEach((row, rowIndex) => {
+                let invalidCount = 0;
+                let missingRequiredCount = 0;
+                
+                data.headers.forEach((header, colIndex) => {
+                    if (!header) return;
+                    
+                    const value = row[colIndex];
+                    if (ALL_FIELDS[header] && ALL_FIELDS[header].mandatory && (!value || value === '')) {
+                        missingRequiredCount++;
+                    }
+                    
+                    if (results.fieldValidation[header] && 
+                        results.fieldValidation[header].invalid.includes(rowIndex)) {
+                        invalidCount++;
+                    }
+                });
+                
+                results.sampleValidation.push({
+                    invalidCount: invalidCount,
+                    missingRequiredCount: missingRequiredCount
+                });
+            });
+
+            return results;
+        }
+
+        function validateField(fieldName, values, fieldDef) {
+            const result = {
+                valid: [],
+                invalid: [],
+                uncertain: [],
+                missing: []
+            };
+
+            values.forEach((value, index) => {
+                // Check if required field is missing
+                if (fieldDef.mandatory && (!value || value === '')) {
+                    result.missing.push(index);
+                    return;
+                }
+
+                // Skip validation for empty optional fields
+                if (!value || value === '') {
+                    return;
+                }
+
+                const validation = validateValue(value, fieldDef, fieldName);
+                result[validation].push(index);
+            });
+
+            return result;
+        }
+
+        function validateValue(value, fieldDef, fieldName) {
+            const strValue = String(value).trim();
+            
+            // Check enumeration values first
+            if (ALL_ENUMERATIONS[fieldName]) {
+                const allowedValues = ALL_ENUMERATIONS[fieldName];
+                return allowedValues.includes(strValue) ? 'valid' : 'invalid';
+            }
+            
+            // Simple validations we can perform
+            if (fieldDef.valueSyntax.includes('{float}')) {
+                if (fieldDef.valueSyntax === '{float} {float}') {
+                    // Lat/lon format
+                    const parts = strValue.split(/\s+/);
+                    if (parts.length === 2 && !isNaN(parseFloat(parts[0])) && !isNaN(parseFloat(parts[1]))) {
+                        return 'valid';
+                    } else {
+                        return 'invalid';
+                    }
+                } else if (fieldDef.valueSyntax === '{float} {unit}') {
+                    // Measurement with unit
+                    const match = strValue.match(/^([\d.-]+)\s+(.+)$/);
+                    if (match && !isNaN(parseFloat(match[1]))) {
+                        return 'valid';
+                    } else {
+                        return 'invalid';
+                    }
+                } else {
+                    // Single float
+                    return !isNaN(parseFloat(strValue)) ? 'valid' : 'invalid';
+                }
+            }
+            
+            if (fieldDef.valueSyntax.includes('{integer}')) {
+                return Number.isInteger(Number(strValue)) ? 'valid' : 'invalid';
+            }
+            
+            if (fieldDef.valueSyntax === '{text}') {
+                return strValue.length > 0 ? 'valid' : 'invalid';
+            }
+            
+            // For complex patterns that we haven't implemented, mark as uncertain
+            if (fieldDef.valueSyntax.includes('[') || 
+                fieldDef.valueSyntax.includes('NCBI') || 
+                fieldDef.valueSyntax.includes('EnvO') ||
+                fieldDef.expectedValue.includes('enumeration')) {
+                return 'uncertain';
+            }
+            
+            // Default for simple text
+            return strValue.length > 0 ? 'valid' : 'invalid';
+        }
+
+        function displayResults(data, results) {
+            // Show summary
+            document.getElementById('summaryPanel').style.display = 'block';
+            
+            // File statistics
+            const samplesWithInvalid = results.sampleValidation.filter(s => s.invalidCount > 0 || s.missingRequiredCount > 0).length;
+            const fieldsWithInvalid = Object.values(results.invalidValueCounts).filter(count => count > 0).length;
+            
+            document.getElementById('fileStats').innerHTML = `
+                <div class="stat-number">${data.rows.length}</div>
+                <div>Total samples</div>
+                <hr style="margin: 15px 0;">
+                <div class="stat-number">${data.headers.filter(h => h).length}</div>
+                <div>Total fields</div>
+            `;
+            
+            document.getElementById('fieldStats').innerHTML = `
+                <div><strong>${fieldsWithInvalid}</strong> fields with invalid values</div>
+                <div><strong>${results.emptyFields.length}</strong> fields empty for all samples</div>
+                <div><strong>${samplesWithInvalid}</strong> samples with validation issues</div>
+            `;
+            
+            // Missing required fields
+            if (results.missingRequired.length > 0) {
+                document.getElementById('missingFields').innerHTML = `
+                    <ul>${results.missingRequired.map(field => `<li>${field}</li>`).join('')}</ul>
+                `;
+            } else {
+                document.getElementById('missingFields').innerHTML = '<div style="color: green;">✓ All required fields present</div>';
+            }
+            
+            // Non-standard fields
+            if (results.nonStandardFields.length > 0) {
+                document.getElementById('nonStandardFields').innerHTML = `
+                    <ul>${results.nonStandardFields.slice(0, 10).map(field => `<li>${field}</li>`).join('')}</ul>
+                    ${results.nonStandardFields.length > 10 ? `<div style="font-style: italic;">...and ${results.nonStandardFields.length - 10} more</div>` : ''}
+                `;
+            } else {
+                document.getElementById('nonStandardFields').innerHTML = '<div style="color: green;">✓ All fields are MIxS standard</div>';
+            }
+            
+            // Show legend and table
+            document.getElementById('legend').style.display = 'block';
+            displayTable(data, results);
+            document.getElementById('downloadSection').style.display = 'block';
+        }
+
+        function displayTable(data, results) {
+            const table = document.getElementById('dataTable');
+            table.innerHTML = '';
+            
+            // Create header
+            const headerRow = table.insertRow();
+            headerRow.innerHTML = '<th>Row</th>' + data.headers.map(h => `<th>${h || ''}</th>`).join('');
+            
+            // Create data rows
+            data.rows.forEach((row, rowIndex) => {
+                const tableRow = table.insertRow();
+                tableRow.insertCell().textContent = rowIndex + 1;
+                
+                data.headers.forEach((header, colIndex) => {
+                    const cell = tableRow.insertCell();
+                    const value = row[colIndex] || '';
+                    cell.textContent = value;
+                    
+                    // Apply conditional formatting
+                    if (header && ALL_FIELDS[header]) {
+                        const validation = results.fieldValidation[header];
+                        if (validation) {
+                            if (validation.missing.includes(rowIndex)) {
+                                cell.classList.add('missing');
+                            } else if (validation.invalid.includes(rowIndex)) {
+                                cell.classList.add('invalid');
+                            } else if (validation.uncertain.includes(rowIndex)) {
+                                cell.classList.add('uncertain');
+                            } else if (validation.valid.includes(rowIndex)) {
+                                cell.classList.add('valid');
+                            }
+                        }
+                    } else if (header && results.missingRequired.includes(header)) {
+                        cell.classList.add('missing');
+                    }
+                });
+            });
+            
+            document.getElementById('tableContainer').style.display = 'block';
+        }
+
+        async function downloadValidatedFile() {
+            if (!currentWorkbook || !currentData || !validationResults) {
+                showError('No data to download');
+                return;
+            }
+
+            // Show loading indicator
+            showLoading(true);
+            hideError();
+
+            // Use setTimeout to prevent UI freeze
+            setTimeout(async () => {
+                try {
+                    // Create new workbook with ExcelJS
+                    const workbook = new ExcelJS.Workbook();
+                    workbook.creator = 'MIxS Validator';
+                    workbook.created = new Date();
+                    
+                    // Create expanded headers including missing required fields
+                    const expandedHeaders = [...currentData.headers];
+                    const missingRequiredFields = validationResults.missingRequired;
+                    expandedHeaders.push(...missingRequiredFields);
+                    
+                    // Add main datasheet
+                    const dataSheet = workbook.addWorksheet('Data with Validation');
+                    
+                    // Row 1: Title with arrow
+                    dataSheet.getCell('A1').value = `→ Computer generated validation of "${originalFileName}.xlsx" against MIxS standard`;
+                    dataSheet.getCell('A1').font = { size: 12, bold: true };
+                    
+                    // Row 3-7: Legend in correct order
+                    dataSheet.getCell('A3').value = 'LEGEND:';
+                    dataSheet.getCell('A4').value = 'Valid - field passed validation';
+                    dataSheet.getCell('A5').value = 'Uncertain - complex validation not performed'; 
+                    dataSheet.getCell('A6').value = 'Missing - required field is empty';
+                    dataSheet.getCell('A7').value = 'Invalid - field failed validation';
+                    
+                    // Apply legend formatting
+                    dataSheet.getCell('A3').font = { size: 12, bold: true };
+                    
+                    // Valid = Green
+                    dataSheet.getCell('A4').fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: 'FFC6EFCE' }
+                    };
+                    
+                    // Uncertain = White (no fill)
+                    // Missing = Yellow  
+                    dataSheet.getCell('A6').fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: 'FFFFEB9C' }
+                    };
+                    
+                    // Invalid = Red
+                    dataSheet.getCell('A7').fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: 'FFFFC7CE' }
+                    };
+                    
+                    // Row 8-9: Format notes
+                    dataSheet.getCell('A8').value = 'Headers of required fields are in bold';
+                    dataSheet.getCell('A8').font = { size: 11, bold: true };
+                    
+                    dataSheet.getCell('A9').value = 'Required fields missing from input file are appended at the right';
+                    dataSheet.getCell('A9').font = { size: 11, italic: true };
+                    
+                    // Row 10: Blank row for spacing
+                    // (leave empty for visual separation)
+                    
+                    // Row 11: Tip
+                    dataSheet.getCell('A11').value = 'Tip: go to Review and select "Show All Comments"';
+                    dataSheet.getCell('A11').font = { size: 11, italic: true };
+                    
+                    // Merge legend cells
+                    const maxCols = Math.min(8, expandedHeaders.length);
+                    const colLetter = String.fromCharCode(64 + maxCols);
+                    dataSheet.mergeCells(`A1:${colLetter}1`);
+                    dataSheet.mergeCells(`A3:${colLetter}3`);
+                    dataSheet.mergeCells(`A4:${colLetter}4`);
+                    dataSheet.mergeCells(`A5:${colLetter}5`);
+                    dataSheet.mergeCells(`A6:${colLetter}6`);
+                    dataSheet.mergeCells(`A7:${colLetter}7`);
+                    dataSheet.mergeCells(`A8:${colLetter}8`);
+                    dataSheet.mergeCells(`A9:${colLetter}9`);
+                    // Row 10 is blank - no merge needed
+                    dataSheet.mergeCells(`A11:${colLetter}11`);
+                    
+                    // Add note for appended fields if any
+                    if (missingRequiredFields.length > 0) {
+                        const firstAddedCol = currentData.headers.length + 1;
+                        const firstAddedColLetter = String.fromCharCode(64 + firstAddedCol);
+                        dataSheet.getCell(`${firstAddedColLetter}12`).value = '|--These required fields were missing from the input file-->';
+                        dataSheet.getCell(`${firstAddedColLetter}12`).font = { size: 10, italic: true };
+                        dataSheet.getCell(`${firstAddedColLetter}12`).alignment = { horizontal: 'left' };
+                    }
+                    
+                    // Row 13: Headers with comments
+                    const headerRow = dataSheet.getRow(13);
+                    expandedHeaders.forEach((header, colIndex) => {
+                        if (header) {
+                            const cell = headerRow.getCell(colIndex + 1);
+                            cell.value = header;
+                            
+                            // Apply header formatting
+                            const fieldDef = ALL_FIELDS[header];
+                            const isRequired = fieldDef ? fieldDef.mandatory : false;
+                            const isAddedField = missingRequiredFields.includes(header);
+                            
+                            if (isRequired && !isAddedField) {
+                                cell.font = { size: 12, bold: true };
+                            } else if (isAddedField) {
+                                cell.font = { size: 12, italic: true };
+                            }
+                            
+                            // Create comprehensive comment for ALL headers
+                            const humanName = FIELD_INFO[header] ? FIELD_INFO[header].humanName : header;
+                            const commentTexts = [];
+                            
+                            // Bold human readable name
+                            commentTexts.push({
+                                font: { size: 11, bold: true, color: { theme: 1 }, name: 'Calibri' },
+                                text: humanName
+                            });
+                            
+                            commentTexts.push({
+                                font: { size: 10, color: { theme: 1 }, name: 'Calibri' },
+                                text: '\n'
+                            });
+                            
+                            // Required status in italics
+                            if (isRequired) {
+                                commentTexts.push({
+                                    font: { size: 10, italic: true, color: { theme: 1 }, name: 'Calibri' },
+                                    text: 'required'
+                                });
+                                commentTexts.push({
+                                    font: { size: 10, color: { theme: 1 }, name: 'Calibri' },
+                                    text: '\n'
+                                });
+                            }
+                            
+                            if (isAddedField) {
+                                commentTexts.push({
+                                    font: { size: 10, italic: true, color: { theme: 1 }, name: 'Calibri' },
+                                    text: 'added automatically'
+                                });
+                                commentTexts.push({
+                                    font: { size: 10, color: { theme: 1 }, name: 'Calibri' },
+                                    text: '\n'
+                                });
+                            }
+                            
+                            // Field-specific information
+                            if (ALL_ENUMERATIONS[header]) {
+                                const values = ALL_ENUMERATIONS[header];
+                                commentTexts.push({
+                                    font: { size: 10, color: { theme: 1 }, name: 'Calibri' },
+                                    text: `Values must be one of these ${values.length}:\n` + values.join('\n')
+                                });
+                            } else if (fieldDef) {
+                                let infoText = '';
+                                if (fieldDef.expectedValue) {
+                                    infoText += `Expected: ${fieldDef.expectedValue}\n`;
+                                }
+                                if (fieldDef.valueSyntax) {
+                                    infoText += `Format: ${fieldDef.valueSyntax}\n`;
+                                }
+                                const fieldInfo = FIELD_INFO[header];
+                                if (fieldInfo && fieldInfo.example && 
+                                    fieldInfo.example.trim() !== '' && 
+                                    fieldInfo.example.trim() !== 'N/A') {
+                                    infoText += `Example: ${fieldInfo.example}`;
+                                }
+                                if (infoText) {
+                                    commentTexts.push({
+                                        font: { size: 10, color: { theme: 1 }, name: 'Calibri' },
+                                        text: infoText.trim()
+                                    });
+                                }
+                            } else {
+                                commentTexts.push({
+                                    font: { size: 10, color: { theme: 1 }, name: 'Calibri' },
+                                    text: 'Not a standard MIxS field'
+                                });
+                            }
+                            
+                            // Add the comment
+                            cell.note = {
+                                texts: commentTexts,
+                                margins: { insetmode: 'custom', inset: [0.13, 0.13, 0.13, 0.13] },
+                                width: 3,
+                                height: 3
+                            };
+                        }
+                    });
+                    
+                    // Add data rows starting from row 14
+                    currentData.rows.forEach((row, rowIndex) => {
+                        const dataRow = dataSheet.getRow(rowIndex + 14);
+                        
+                        // Add original data with validation formatting
+                        for (let colIndex = 0; colIndex < currentData.headers.length; colIndex++) {
+                            const cell = dataRow.getCell(colIndex + 1);
+                            cell.value = row[colIndex] || '';
+                            
+                            const header = currentData.headers[colIndex];
+                            
+                            if (header && ALL_FIELDS[header] && validationResults.fieldValidation[header]) {
+                                const validation = validationResults.fieldValidation[header];
+                                const fieldDef = ALL_FIELDS[header];
+                                
+                                if (validation.missing.includes(rowIndex)) {
+                                    // Missing = Yellow
+                                    cell.fill = {
+                                        type: 'pattern',
+                                        pattern: 'solid',
+                                        fgColor: { argb: 'FFFFEB9C' }
+                                    };
+                                } else if (validation.invalid.includes(rowIndex)) {
+                                    // Invalid = Red + comment
+                                    cell.fill = {
+                                        type: 'pattern',
+                                        pattern: 'solid',
+                                        fgColor: { argb: 'FFFFC7CE' }
+                                    };
+                                    
+                                    const cellValue = row[colIndex] || '';
+                                    const commentText = `Found: "${cellValue}"\n\n${getExpectedValues(fieldDef, header)}`;
+                                    
+                                    cell.note = {
+                                        texts: [{
+                                            font: { size: 10, color: { theme: 1 }, name: 'Calibri' },
+                                            text: commentText
+                                        }],
+                                        margins: { insetmode: 'custom', inset: [0.13, 0.13, 0.13, 0.13] },
+                                        width: 3,
+                                        height: 3
+                                    };
+                                } else if (validation.uncertain.includes(rowIndex)) {
+                                    // Uncertain = White (no fill)
+                                } else if (validation.valid.includes(rowIndex)) {
+                                    // Valid = Green
+                                    cell.fill = {
+                                        type: 'pattern',
+                                        pattern: 'solid',
+                                        fgColor: { argb: 'FFC6EFCE' }
+                                    };
+                                }
+                            }
+                        }
+                        
+                        // Add empty cells for missing required fields
+                        for (let i = 0; i < missingRequiredFields.length; i++) {
+                            dataRow.getCell(currentData.headers.length + i + 1).value = '';
+                        }
+                    });
+                    
+                    // Set column widths
+                    dataSheet.getColumn(1).width = 30;
+                    for (let i = 2; i <= expandedHeaders.length; i++) {
+                        dataSheet.getColumn(i).width = 15;
+                    }
+                    
+                    // Create summary sheet
+                    const summarySheet = workbook.addWorksheet('Summary');
+                    const summaryData = [
+                        ['MIxS Validation Summary'],
+                        [''],
+                        ['File Statistics'],
+                        ['Total samples', currentData.rows.length],
+                        ['Total fields in original file', currentData.headers.filter(h => h).length],
+                        ['Total fields after adding missing required', expandedHeaders.filter(h => h).length],
+                        ['Fields with validation issues', Object.values(validationResults.invalidValueCounts).filter(count => count > 0).length],
+                        ['Samples with validation issues', validationResults.sampleValidation.filter(s => s.invalidCount > 0 || s.missingRequiredCount > 0).length],
+                        [''],
+                        ['Missing Required Fields (Added to File)'],
+                        ...validationResults.missingRequired.map(field => ['Added', field]),
+                        [''],
+                        ['Non-Standard Fields'],
+                        ...validationResults.nonStandardFields.slice(0, 15).map(field => ['Non-standard', field]),
+                        [''],
+                        ['Field Validation Details'],
+                        ['Field Name', 'Valid Count', 'Invalid Count', 'Uncertain Count', 'Missing Count']
+                    ];
+                    
+                    Object.keys(validationResults.fieldValidation).forEach(field => {
+                        const validation = validationResults.fieldValidation[field];
+                        summaryData.push([
+                            field,
+                            validation.valid.length,
+                            validation.invalid.length,
+                            validation.uncertain.length,
+                            validation.missing.length
+                        ]);
+                    });
+                    
+                    // Add summary data
+                    summaryData.forEach((row, rowIndex) => {
+                        const summaryRow = summarySheet.getRow(rowIndex + 1);
+                        row.forEach((cell, colIndex) => {
+                            summaryRow.getCell(colIndex + 1).value = cell;
+                        });
+                    });
+                    
+                    // Generate filename
+                    const now = new Date();
+                    const dateStr = now.getFullYear() + '-' + 
+                                  String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                                  String(now.getDate()).padStart(2, '0');
+                    const timeStr = String(now.getHours() % 12 || 12).padStart(2, '0') + '-' + 
+                                  String(now.getMinutes()).padStart(2, '0') + 
+                                  (now.getHours() >= 12 ? 'pm' : 'am');
+                    
+                    const filename = `${originalFileName}_mixs-validated_${dateStr}_at${timeStr}.xlsx`;
+                    
+                    // Generate and download file
+                    const buffer = await workbook.xlsx.writeBuffer();
+                    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                    
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                    
+                    showLoading(false);
+                    
+                } catch (error) {
+                    showLoading(false);
+                    showError('Error creating download file: ' + error.message);
+                    console.error('Download error:', error);
+                }
+            }, 100);
+        }
+
+        function getExpectedValues(fieldDef, fieldName) {
+            const humanName = FIELD_INFO[fieldName] ? FIELD_INFO[fieldName].humanName : fieldName;
+            
+            // Check if this field has enumeration values
+            if (ALL_ENUMERATIONS[fieldName]) {
+                const values = ALL_ENUMERATIONS[fieldName];
+                return `Value for ${humanName} must be one of:\n${values.join('\n')}`;
+            }
+            
+            // Generate helpful error messages based on field definition
+            if (fieldDef.valueSyntax === '{float} {float}') {
+                const example = FIELD_INFO[fieldName] && FIELD_INFO[fieldName].example ? 
+                              `\nExample: "${FIELD_INFO[fieldName].example}"` : '';
+                return `Value for ${humanName} should be: two decimal numbers separated by space${example}`;
+            }
+            if (fieldDef.valueSyntax === '{float} {unit}') {
+                const example = FIELD_INFO[fieldName] && FIELD_INFO[fieldName].example ? 
+                              `\nExample: "${FIELD_INFO[fieldName].example}"` : '';
+                return `Value for ${humanName} should be: number followed by unit${example}`;
+            }
+            if (fieldDef.valueSyntax.includes('{float}')) {
+                return `Value for ${humanName} should be: decimal number`;
+            }
+            if (fieldDef.valueSyntax.includes('{integer}')) {
+                return `Value for ${humanName} should be: whole number`;
+            }
+            if (fieldDef.expectedValue.includes('enumeration')) {
+                return `Value for ${humanName} must be one of the allowed options.\nCheck MIxS documentation for complete list.`;
+            }
+            if (fieldDef.expectedValue && FIELD_INFO[fieldName] && FIELD_INFO[fieldName].example) {
+                return `Expected for ${humanName}: ${fieldDef.expectedValue}\nExample: "${FIELD_INFO[fieldName].example}"`;
+            }
+            return `Value for ${humanName} does not meet field requirements.\nCheck MIxS documentation for details.`;
+        }
+
+        function showLoading(show) {
+            document.getElementById('loadingDiv').style.display = show ? 'block' : 'none';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorDiv');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('errorDiv').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

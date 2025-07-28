@@ -92,6 +92,55 @@
             display: none;
         }
 
+        .example-buttons {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            justify-content: space-between;
+            max-width: 100%;
+        }
+
+        .example-btn {
+            flex: 1;
+            border: 3px solid #ddd;
+            border-radius: 15px;
+            padding: 25px 20px;
+            text-align: center;
+            background: #fafafa;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .example-btn:hover {
+            border-color: #4facfe;
+            background: #f0f8ff;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.2);
+        }
+
+        .example-icon {
+            font-size: 2.5em;
+            color: #ddd;
+            margin-bottom: 12px;
+        }
+
+        .example-btn:hover .example-icon {
+            color: #4facfe;
+        }
+
+        .example-text {
+            font-size: 1.1em;
+            color: #666;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .example-subtext {
+            color: #999;
+            font-size: 0.85em;
+            line-height: 1.3;
+        }
+
         .summary-panel {
             display: none;
             background: #f8f9fa;
@@ -284,6 +333,19 @@
                 <div class="upload-subtext">Supports .xlsx and .xls files</div>
             </div>
             <input type="file" id="fileInput" class="file-input" accept=".xlsx,.xls">
+
+            <div class="example-buttons">
+                <div class="example-btn" onclick="downloadExample()">
+                    <div class="example-icon">📄</div>
+                    <div class="example-text">Download Example</div>
+                    <div class="example-subtext">Drop the example into the box to demonstrate output</div>
+                </div>
+                <div class="example-btn" onclick="downloadTemplate()">
+                    <div class="example-icon">📋</div>
+                    <div class="example-text">Download Template</div>
+                    <div class="example-subtext">Ready to enter data</div>
+                </div>
+            </div>
 
             <div class="error" id="errorDiv"></div>
             <div class="loading" id="loadingDiv">
@@ -962,17 +1024,6 @@
                                 });
                             }
                             
-                            if (isAddedField) {
-                                commentTexts.push({
-                                    font: { size: 10, italic: true, color: { theme: 1 }, name: 'Calibri' },
-                                    text: 'added automatically'
-                                });
-                                commentTexts.push({
-                                    font: { size: 10, color: { theme: 1 }, name: 'Calibri' },
-                                    text: '\n'
-                                });
-                            }
-                            
                             // Field-specific information
                             if (ALL_ENUMERATIONS[header]) {
                                 const values = ALL_ENUMERATIONS[header];
@@ -1206,6 +1257,233 @@
 
         function hideError() {
             document.getElementById('errorDiv').style.display = 'none';
+        }
+
+        async function downloadExample() {
+            try {
+                // First, try to fetch the comprehensive static example file
+                try {
+                    const response = await fetch('./examples/comprehensive-example.xlsx');
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        
+                        // Create download link for static file
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'mixs-comprehensive-example.xlsx';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+                        
+                        return; // Success - exit early
+                    }
+                } catch (fetchError) {
+                    console.log('Static example file not available, generating fallback');
+                }
+                
+                // Fallback: Generate a smaller example file
+                console.log('Creating generated example file (offline mode)');
+                
+                const workbook = new ExcelJS.Workbook();
+                workbook.creator = 'MIxS Validator';
+                workbook.created = new Date();
+                
+                const worksheet = workbook.addWorksheet('Sample Data');
+                
+                // Headers - mix of required and optional fields
+                const headers = [
+                    'samp_name', 'project_name', 'lat_lon', 'geo_loc_name', 
+                    'collection_date', 'surf_material', 'indoor_space', 'air_temp',
+                    'building_setting', 'room_type', 'samp_weather'
+                ];
+                
+                // Add headers
+                const headerRow = worksheet.addRow(headers);
+                headerRow.font = { bold: true };
+                
+                // Add sample data rows with mix of valid/invalid/missing data
+                worksheet.addRow([
+                    'Sample_001', 'Office Building Study', '40.7128 -74.0060', 
+                    'USA: New York: Manhattan', '2024-01-15', 'wood', 
+                    'office', '22 celsius', 'urban', 'office', 'sunny'
+                ]);
+                
+                worksheet.addRow([
+                    'Sample_002', 'Office Building Study', '40.7589 -73.9851', 
+                    'USA: New York: Manhattan', '2024-01-16', 'glassss', // Invalid enum
+                    'bathroom', '', 'urban', 'bathroom', 'cloudy' // Missing air_temp
+                ]);
+                
+                worksheet.addRow([
+                    'Sample_003', 'Office Building Study', 'invalid coordinates', // Invalid lat/lon
+                    'USA: New York: Manhattan', '2024-01-17', 'metal', 
+                    'kitchen', '20.5 celsius', 'urban', 'kitchen', 'rainy'
+                ]);
+                
+                worksheet.addRow([
+                    '', 'Office Building Study', '40.7505 -73.9934', // Missing samp_name
+                    'USA: New York: Manhattan', '2024-01-18', 'plastic', 
+                    'hallway', '21 celsius', 'suburban', 'hallway', 'foggy'
+                ]);
+                
+                // Add a note about the fallback
+                worksheet.addRow([]);
+                worksheet.addRow(['NOTE: This is a simplified example generated offline.']);
+                worksheet.addRow(['For a comprehensive example with more validation scenarios,']);
+                worksheet.addRow(['visit the tool online at: https://yourusername.github.io/mixs-validator']);
+                
+                // Set column widths
+                worksheet.columns.forEach(column => {
+                    column.width = 20;
+                });
+                
+                // Generate and download
+                const buffer = await workbook.xlsx.writeBuffer();
+                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'mixs-basic-example.xlsx';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                // Show a brief notification about the fallback
+                const originalText = document.querySelector('.example-btn .example-subtext').textContent;
+                const subtextElement = document.querySelector('.example-btn .example-subtext');
+                subtextElement.textContent = 'Generated basic example (offline mode)';
+                subtextElement.style.color = '#f39c12';
+                
+                // Reset text after 3 seconds
+                setTimeout(() => {
+                    subtextElement.textContent = originalText;
+                    subtextElement.style.color = '#999';
+                }, 3000);
+                
+            } catch (error) {
+                showError('Error creating example file: ' + error.message);
+            }
+        }
+
+        async function downloadTemplate() {
+            try {
+                // Create a clean template with all required fields
+                const workbook = new ExcelJS.Workbook();
+                workbook.creator = 'MIxS Validator';
+                workbook.created = new Date();
+                
+                const worksheet = workbook.addWorksheet('MIxS Template');
+                
+                // All required fields from MIxS and Built Environment
+                const requiredHeaders = REQUIRED_FIELDS.sort();
+                
+                // Add headers with formatting
+                const headerRow = worksheet.addRow(requiredHeaders);
+                headerRow.font = { bold: true };
+                headerRow.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFE6F3FF' } // Light blue background
+                };
+                
+                // Add helpful comments to headers
+                requiredHeaders.forEach((header, index) => {
+                    const cell = headerRow.getCell(index + 1);
+                    const fieldDef = ALL_FIELDS[header];
+                    const humanName = FIELD_INFO[header] ? FIELD_INFO[header].humanName : header;
+                    
+                    let commentText = `${humanName}\nRequired field\n\n`;
+                    
+                    if (ALL_ENUMERATIONS[header]) {
+                        const values = ALL_ENUMERATIONS[header];
+                        commentText += `Values must be one of these ${values.length}:\n` + values.slice(0, 10).join('\n');
+                        if (values.length > 10) {
+                            commentText += '\n... and more';
+                        }
+                    } else if (fieldDef) {
+                        if (fieldDef.expectedValue) {
+                            commentText += `Expected: ${fieldDef.expectedValue}\n`;
+                        }
+                        if (fieldDef.valueSyntax) {
+                            commentText += `Format: ${fieldDef.valueSyntax}\n`;
+                        }
+                        const fieldInfo = FIELD_INFO[header];
+                        if (fieldInfo && fieldInfo.example) {
+                            commentText += `Example: ${fieldInfo.example}`;
+                        }
+                    }
+                    
+                    cell.note = {
+                        texts: [{
+                            font: { size: 10, color: { theme: 1 }, name: 'Calibri' },
+                            text: commentText.trim()
+                        }],
+                        margins: { insetmode: 'custom', inset: [0.13, 0.13, 0.13, 0.13] }
+                    };
+                });
+                
+                // Add a few empty rows for data entry
+                for (let i = 0; i < 5; i++) {
+                    worksheet.addRow(new Array(requiredHeaders.length).fill(''));
+                }
+                
+                // Set column widths
+                worksheet.columns.forEach(column => {
+                    column.width = 18;
+                });
+                
+                // Add instructions sheet
+                const instructionsSheet = workbook.addWorksheet('Instructions');
+                const instructions = [
+                    ['MIxS Metadata Template'],
+                    [''],
+                    ['Instructions:'],
+                    ['1. Fill in your sample data in the "MIxS Template" sheet'],
+                    ['2. Each row represents one sample'],
+                    ['3. All columns are required fields - please provide values'],
+                    ['4. Hover over column headers to see expected formats and examples'],
+                    ['5. Save the file and upload to the MIxS Validator for validation'],
+                    [''],
+                    ['Tips:'],
+                    ['• Use consistent formatting (e.g., "25.5 celsius" for temperatures)'],
+                    ['• For coordinates, use "latitude longitude" format (e.g., "40.7128 -74.0060")'],
+                    ['• For dates, use ISO format (e.g., "2024-01-15T10:00:00+00:00")'],
+                    ['• Check enumeration fields carefully - only specific values are allowed'],
+                    [''],
+                    ['For more help, visit: https://yourusername.github.io/mixs-validator']
+                ];
+                
+                instructions.forEach((row, index) => {
+                    const instructionRow = instructionsSheet.addRow(row);
+                    if (index === 0) {
+                        instructionRow.font = { bold: true, size: 14 };
+                    } else if (row[0] && (row[0].includes(':') || row[0].includes('•'))) {
+                        instructionRow.font = { bold: true };
+                    }
+                });
+                
+                instructionsSheet.getColumn(1).width = 80;
+                
+                // Generate and download
+                const buffer = await workbook.xlsx.writeBuffer();
+                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'mixs-template.xlsx';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+            } catch (error) {
+                showError('Error creating template file: ' + error.message);
+            }
         }
     </script>
 </body>
